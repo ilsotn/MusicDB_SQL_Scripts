@@ -1,0 +1,152 @@
+USE MusicDB;
+GO
+
+-- CREATE ALBUM
+ALTER PROCEDURE spCreateAlbum
+    @AlbumName NVARCHAR(100),
+    @ReleaseYear SMALLINT = NULL,
+    @ArtistID INT = NULL,
+    @MonthlyListeners INT = 0,
+	@GenreName NVARCHAR(50) = NULL
+AS
+BEGIN
+    -- Insert the album into the Albums table
+    DECLARE @GenreID SMALLINT  = 1;
+	IF @GenreName IS NOT NULL
+		SELECT @GenreID = GenreID
+		FROM Genres
+		WHERE GenreName = @GenreName;
+	IF @GenreName IS NOT NULL
+		BEGIN
+			INSERT INTO Genres (GenreName) 
+			VALUES (@GenreName)
+			SET @GenreID = @@identity; -- last generated id 
+		END
+    INSERT INTO Albums (AlbumName, ReleaseYear, ArtistID, GenreID, MonthlyListeners)
+    VALUES (@AlbumName, ISNULL(@ReleaseYear, YEAR(GETDATE())), @ArtistID, @GenreID, @MonthlyListeners);
+END;
+GO
+
+-- GET ALBUMS with filtering options
+ALTER PROCEDURE spGetAlbums
+    @ShowDeleted BIT = 0,
+    @ArtistName NVARCHAR(100) = NULL,
+    @GenreName NVARCHAR(50) = NULL,
+    @StartYear SMALLINT = NULL,
+    @EndYear SMALLINT = NULL,
+    @MinMonthlyListeners INT = NULL,  
+    @MaxMonthlyListeners INT = NULL,
+    @PageNumber INT = 1, 
+    @PageSize INT = 5    
+AS
+BEGIN
+    DECLARE @Offset INT;
+    SET @Offset = (@PageNumber - 1) * @PageSize + 1;  
+
+    WITH PagedAlbums AS
+    (
+        SELECT 
+            a.AlbumName, 
+            a.ReleaseYear, 
+            g.GenreName, 
+            ar.ArtistName,
+            a.MonthlyListeners,
+            ROW_NUMBER() OVER (ORDER BY a.MonthlyListeners DESC) AS RowNum  
+        FROM Albums a
+            LEFT JOIN Artists ar ON a.ArtistID = ar.ArtistID
+            LEFT JOIN Genres g ON a.GenreID = g.GenreID
+        WHERE (@ShowDeleted = 1 OR a.Deleted = 0)  -- Include deleted albums only if @ShowDeleted = 1
+            AND (@ArtistName IS NULL OR ar.ArtistName LIKE '%' + @ArtistName + '%')  -- Filter by artist name
+            AND (@GenreName IS NULL OR g.GenreName LIKE '%' + @GenreName + '%')  -- Filter by genre name
+            AND (@StartYear IS NULL OR a.ReleaseYear >= @StartYear)  -- Filter by start year if provided
+            AND (@EndYear IS NULL OR a.ReleaseYear <= @EndYear)  -- Filter by end year if provided
+            AND (@MinMonthlyListeners IS NULL OR a.MonthlyListeners >= @MinMonthlyListeners)  -- Filter by minimum monthly listeners
+            AND (@MaxMonthlyListeners IS NULL OR a.MonthlyListeners <= @MaxMonthlyListeners)  -- Filter by maximum monthly listeners
+    )
+    SELECT * FROM PagedAlbums
+    WHERE RowNum BETWEEN @Offset AND (@Offset + @PageSize - 1); 
+END;
+GO
+
+
+-- UPDATE ALBUM with GenreID and MonthlyListeners
+ALTER PROCEDURE spUpdateAlbum
+    @AlbumID INT,
+    @AlbumName NVARCHAR(100) = NULL,
+    @ReleaseYear SMALLINT = NULL,
+    @ArtistID INT = NULL,
+    @GenreName NVARCHAR(50) = NULL,
+    @MonthlyListeners INT = NULL  
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM Albums WHERE AlbumID = @AlbumID AND Deleted = 0)
+    BEGIN
+        DECLARE @GenreID SMALLINT = NULL;
+
+        IF @GenreName IS NOT NULL
+        BEGIN
+            SELECT @GenreID = GenreID FROM Genres WHERE GenreName = @GenreName;
+            IF @GenreID IS NULL
+            BEGIN
+                INSERT INTO Genres (GenreName) VALUES (@GenreName);
+                SET @GenreID = SCOPE_IDENTITY(); 
+            END
+        END
+
+        UPDATE Albums
+        SET
+            AlbumName = ISNULL(@AlbumName, AlbumName),
+            ReleaseYear = ISNULL(@ReleaseYear, ReleaseYear),
+            ArtistID = ISNULL(@ArtistID, ArtistID),
+            GenreID = ISNULL(@GenreID, GenreID),  -- update GenreID only if @GenreName was provided
+            MonthlyListeners = ISNULL(@MonthlyListeners, MonthlyListeners)
+        WHERE AlbumID = @AlbumID;
+    END
+    ELSE
+    BEGIN
+        RAISERROR('Album not found or has been deleted.', 16, 1);
+    END
+END;
+GO
+
+
+-- SOFT DELETE ALBUM
+ALTER PROCEDURE spDeleteAlbum
+    @AlbumID INT
+AS
+BEGIN
+    -- Check if the album exists and hasn't been deleted
+    IF EXISTS (SELECT 1 FROM Albums WHERE AlbumID = @AlbumID AND Deleted = 0)
+    BEGIN
+        -- Soft delete the album by setting the Deleted status to 1
+        UPDATE Albums
+        SET Deleted = 1
+        WHERE AlbumID = @AlbumID;
+    END
+    ELSE
+    BEGIN
+        RAISERROR('Album not found or already deleted.', 16, 1);
+    END
+END;
+GO
+
+
+-- RESTORE ALBUM
+ALTER PROCEDURE spRestoreAlbum
+    @AlbumID INT
+AS
+BEGIN
+    -- Check if the album exists and has been deleted
+    IF EXISTS (SELECT 1 FROM Albums WHERE AlbumID = @AlbumID AND Deleted = 1)
+    BEGIN
+        -- Restore the album by setting the Deleted status back to 0
+        UPDATE Albums
+        SET Deleted = 0
+        WHERE AlbumID = @AlbumID;
+    END
+    ELSE
+    BEGIN
+        RAISERROR('Album not found or is not deleted.', 16, 1);
+    END
+END;
+GO
