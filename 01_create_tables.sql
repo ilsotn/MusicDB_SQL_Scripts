@@ -12,6 +12,7 @@ IF OBJECT_ID('AlbumSongs', 'U') IS NOT NULL DROP TABLE AlbumSongs;
 IF OBJECT_ID('Songs', 'U') IS NOT NULL DROP TABLE Songs;
 IF OBJECT_ID('Albums', 'U') IS NOT NULL DROP TABLE Albums;
 IF OBJECT_ID('Artists', 'U') IS NOT NULL DROP TABLE Artists;
+IF OBJECT_ID('Genres', 'U') IS NOT NULL DROP TABLE Genres;
 
 -- Create Artists table
 CREATE TABLE Artists (
@@ -20,20 +21,29 @@ CREATE TABLE Artists (
     Country CHAR(3) DEFAULT 'UNK'
 );
 
+-- Create Genres table
+CREATE TABLE Genres (
+    GenreID INT PRIMARY KEY IDENTITY,
+    GenreName NVARCHAR(50) NOT NULL
+);
+
 -- Create Albums table
 CREATE TABLE Albums (
     AlbumID INT PRIMARY KEY IDENTITY,
     AlbumName NVARCHAR(100) NOT NULL,
     ReleaseYear SMALLINT DEFAULT YEAR(GETDATE()), 
     ArtistID INT,
+    GenreID INT DEFAULT 1,  -- Default to 'No genre'
+    Deleted BIT DEFAULT 0,
+    MonthlyListeners INT DEFAULT 0,  
     FOREIGN KEY (ArtistID) REFERENCES Artists(ArtistID)
     ON UPDATE CASCADE
-    ON DELETE SET NULL
+    ON DELETE SET NULL,
+    FOREIGN KEY (GenreID) REFERENCES Genres(GenreID)
+    ON UPDATE CASCADE
+    ON DELETE SET DEFAULT
 );
 
--- Add AlbumGenre column to Albums table
-ALTER TABLE Albums 
-ADD AlbumGenre NVARCHAR(50) DEFAULT 'No genre';
 
 -- Create Songs table
 CREATE TABLE Songs (
@@ -87,3 +97,4 @@ CREATE TABLE PlaylistSongs (
     ON UPDATE CASCADE
     ON DELETE CASCADE
 );
+GO
