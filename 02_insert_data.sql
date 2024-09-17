@@ -4,30 +4,164 @@
 USE MusicDB;
 GO
 
+INSERT INTO Artists (ArtistName) VALUES
+('Unknown Artist');
+
 -- Insert data into Artists table
 INSERT INTO Artists (ArtistName, Country) VALUES
 ('Talking Heads', 'USA'),
 ('King Crimson', 'UK'),
 ('Black Sabbath', 'UK'),
 ('Radiohead', 'USA'),
-('Artist A', 'USA'),
-('Artist B', 'UK');
+('Pink Floyd', 'UK'),
+('The Rolling Stones', 'UK'),
+('Led Zeppelin', 'UK'),
+('The Beatles', 'UK'),
+('David Bowie', 'UK'),
+('Nirvana', 'USA'),
+('System of a Down', 'USA'),
+('MF DOOM', 'USA'),
+('Aphex Twin', 'UK'),
+('Boards of Canada', 'UK');
 
--- Insert data into Albums table
-INSERT INTO Albums (AlbumName, ReleaseYear, AlbumGenre, ArtistID) VALUES
-('Remain in Light', 1980, 'New Wave', 1),
-('In the Court of the Crimson King', 1969, 'Art Rock', 2),
-('Paranoid', 1970, 'Heavy Metal', 3),
-('In Rainbows', 2007, 'Art Rock', 4),
-('Speaking in Tongues', 1983, 'New Wave', 1),
-('Album A', 2024, 'Genre 1', 5),
-('Album B', 2025, 'Genre 2', 5);
+SELECT * FROM Artists
 
--- Insert more data into Albums table without specifying the genre
-INSERT INTO Albums (AlbumName, ReleaseYear, ArtistID) VALUES
-('Remain in Light', 1980, 1),
-('Remain in Light 2', 1980, 1),
-('In Rainbows 2', 2007, 4);
+INSERT INTO Genres (GenreName) 
+VALUES 
+    ('No genre'), -- 1
+    ('New Wave'), -- 2
+    ('Art Rock'), -- 3
+    ('Heavy Metal'), -- 4
+    ('Post-Punk'), -- 5
+    ('Alternative Rock'), -- 6
+    ('Classic Rock'), -- 7
+    ('Progressive Rock'), -- 8
+    ('Psychedelic Rock'), -- 9
+    ('Folk Rock'), -- 10
+    ('Hard Rock'), -- 11
+    ('Blues Rock'), -- 12
+    ('Jazz Rock'), -- 13
+    ('Pop Rock'), -- 14
+    ('Glam Rock'), -- 15
+    ('Indie Rock'), -- 16
+    ('Garage Rock'), -- 17
+    ('Punk Rock'), -- 18
+    ('Grunge'), -- 19
+    ('Emo'), -- 20
+    ('Shoegaze'), -- 21
+    ('Post-Rock'), -- 22
+    ('Synthpop'), -- 23
+    ('Dream Pop'), -- 24
+    ('Britpop'), -- 25
+    ('Funk'), -- 26
+    ('Disco'), -- 27
+    ('Soul'), -- 28
+    ('R&B'), -- 29
+    ('Hip Hop'), -- 30
+    ('Trap'), -- 31
+    ('Reggae'), -- 32
+    ('Ska'), -- 33
+    ('Dub'), -- 34
+    ('Dancehall'), -- 35
+    ('Country'), -- 36
+    ('Bluegrass'), -- 37
+    ('Americana'), -- 38
+    ('Gospel'), -- 39
+    ('Electronic'), -- 40
+    ('House'), -- 41
+    ('Techno'), -- 42
+    ('Trance'), -- 43
+    ('Drum and Bass'), -- 44
+    ('Ambient'), -- 45
+    ('Downtempo'), -- 46
+    ('Industrial'), -- 47
+    ('K-Pop'), -- 48
+    ('J-Pop'), -- 49
+    ('World Music'), -- 50
+	('Nu Metal'), -- 51
+	('IDM'), -- 52
+	('Ambient'), --53
+	('Drill and Bass'); --54
+GO
+
+SELECT * FROM Genres
+
+INSERT INTO Albums (AlbumName, ReleaseYear, GenreID, ArtistID, MonthlyListeners) VALUES
+-- Talking Heads albums
+('Remain in Light', 1980, 2, 2, 300000),      -- New Wave
+('Speaking in Tongues', 1983, 2, 2, 250000),  -- New Wave
+('Fear of Music', 1979, 2, 2, 200000),       -- New Wave
+
+-- King Crimson albums
+('In the Court of the Crimson King', 1969, 3, 3, 1500000), -- Art Rock
+('Red', 1974, 3, 3, 1000000),                  -- Art Rock
+('Larks Tongues in Aspic', 1973, 3, 3, 800000),      -- Art Rock
+('Starless and Bible Black', 1974, 3, 3, 600000),     -- Art Rock
+
+-- Black Sabbath albums
+('Paranoid', 1970, 4, 4, 1800000),             -- Heavy Metal
+('Master of Reality', 1971, 4, 4, 1500000),    -- Heavy Metal
+('Sabbath Bloody Sabbath', 1973, 4, 4, 1200000), -- Heavy Metal
+('Heaven and Hell', 1980, 4, 4, 1100000),      -- Heavy Metal
+
+-- Radiohead albums
+('In Rainbows', 2007, 3, 5, 2000000),          -- Art Rock
+('Kid A', 2000, 6, 5, 1800000),                -- Alternative Rock
+('Amnesiac', 2001, 6, 5, 1600000),             -- Alternative Rock
+
+-- Pink Floyd albums
+('The Dark Side of the Moon', 1973, 8, 6, 3000000), -- Progressive Rock
+('Wish You Were Here', 1975, 8, 6, 2500000),  -- Progressive Rock
+('The Wall', 1979, 8, 6, 2800000),            -- Progressive Rock
+
+-- The Rolling Stones albums
+('Sticky Fingers', 1971, 7, 7, 2200000),      -- Classic Rock
+('Exile on Main St.', 1972, 7, 7, 2100000),   -- Classic Rock
+('Let It Bleed', 1969, 7, 7, 1900000),        -- Classic Rock
+
+-- Led Zeppelin albums
+('Led Zeppelin IV', 1971, 11, 8, 1800000),      -- Hard Rock
+('Houses of the Holy', 1973, 11, 8, 1700000),  -- Hard Rock
+('Physical Graffiti', 1975, 11, 8, 1600000),   -- Hard Rock
+
+-- The Beatles albums
+('Abbey Road', 1969, 7, 9, 3000000),           -- Classic Rock
+('Let It Be', 1970, 7, 9, 2800000),            -- Classic Rock
+('Sgt. Peppers Lonely Hearts Club Band', 1967, 7, 9, 3200000), -- Classic Rock
+
+-- David Bowie albums
+('The Rise and Fall of Ziggy Stardust and the Spiders from Mars', 1972, 15, 10, 1700000), -- Glam Rock
+('Hunky Dory', 1971, 15, 10, 1600000),         -- Glam Rock
+('Low', 1977, 15, 10, 1500000),                -- Glam Rock
+
+-- Nirvana albums
+('Nevermind', 1991, 19, 11, 2000000),          -- Grunge
+('In Utero', 1993, 19, 11, 1800000),           -- Grunge
+('MTV Unplugged in New York', 1994, 19, 11, 1700000), -- Grunge
+
+-- System of a Down albums
+('System of a Down', 1998, 51, 12, 800000),   -- Nu Metal
+('Toxicity', 2001, 51, 12, 1000000),           -- Nu Metal
+('Steal This Album!', 2002, 51, 12, 900000),  -- Nu Metal
+
+-- MF DOOM albums
+('MM...FOOD', 2004, 30, 13, 500000),          -- Hip Hop
+('Operation: Doomsday', 1999, 30, 13, 300000), -- Hip Hop
+('Born Like This', 2009, 30, 13, 400000),     -- Hip Hop
+
+-- Aphex Twin albums
+('Selected Ambient Works 85-92', 1992, 53, 14, 600000), -- Ambient
+('Richard D. James Album', 1996, 52, 14, 500000),       -- IDM
+('Drukqs', 2001, 54, 14, 400000),					    -- Drill and Bass
+
+-- Boards of Canada albums
+('Music Has the Right to Children', 1998, 52, 15, 350000),  -- IDM
+('Geogaddi', 2002, 52, 15, 300000),                         -- IDM
+('The Campfire Headphase', 2005, 52, 15, 250000);          -- IDM
+
+
+
+SELECT * FROM Albums
 
 -- Enable identity insert for Songs table
 SET IDENTITY_INSERT Songs ON;
