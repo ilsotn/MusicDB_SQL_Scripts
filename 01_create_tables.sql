@@ -16,6 +16,7 @@ IF OBJECT_ID('Genres', 'U') IS NOT NULL DROP TABLE Genres;
 
 -- Create Artists table
 CREATE TABLE Artists (
+	Deleted BIT DEFAULT 0,
     ArtistID INT PRIMARY KEY IDENTITY,
     ArtistName NVARCHAR(100) NOT NULL,
     Country CHAR(3) DEFAULT 'UNK'
