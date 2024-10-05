@@ -145,8 +145,8 @@ INSERT INTO Albums (AlbumName, ReleaseYear, GenreID, ArtistID, MonthlyListeners)
 ('Steal This Album!', 2002, 51, 12, 900000),  -- Nu Metal
 
 -- MF DOOM albums
-('MM...FOOD', 2004, 30, 13, 500000),          -- Hip Hop
-('Operation: Doomsday', 1999, 30, 13, 300000), -- Hip Hop
+('MM..FOOD', 2004, 30, 13, 500000),          -- Hip Hop
+('Madvillainy', 2004, 30, 13, 300000), -- Hip Hop
 ('Born Like This', 2009, 30, 13, 400000),     -- Hip Hop
 
 -- Aphex Twin albums
