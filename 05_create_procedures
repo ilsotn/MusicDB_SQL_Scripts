@@ -9,75 +9,128 @@ ALTER PROCEDURE spCreateAlbum
     @ArtistName NVARCHAR(100),
     @MonthlyListeners INT = 0,
     @GenreName NVARCHAR(50) = NULL,
-    @Country CHAR(3) = 'UNK'
+    @Country CHAR(3) = 'UNK',
+    @AlbumCover VARBINARY(MAX) = NULL,  
+    @AlbumID INT OUTPUT
+AS
+BEGIN
+    BEGIN TRY
+        SET NOCOUNT ON;
+
+        DECLARE @ArtistID INT;
+        DECLARE @GenreID INT = 1;
+
+        -- Check for duplicate album
+        IF EXISTS (SELECT 1 FROM Albums WHERE AlbumName = @AlbumName AND ReleaseYear = ISNULL(@ReleaseYear, YEAR(GETDATE())) AND Deleted = 0)
+        BEGIN
+            RAISERROR('An album with the same name and release year already exists.', 16, 1);
+            RETURN;
+        END
+
+        -- Handle Artist
+        IF @ArtistName IS NOT NULL
+        BEGIN
+            SELECT @ArtistID = ArtistID 
+            FROM Artists 
+            WHERE ArtistName = @ArtistName AND Deleted = 0;
+
+            IF @ArtistID IS NULL
+            BEGIN
+                INSERT INTO Artists (ArtistName, Country)
+                VALUES (@ArtistName, @Country);
+
+                SET @ArtistID = SCOPE_IDENTITY();
+            END
+        END
+        ELSE
+        BEGIN
+            RAISERROR('ArtistName must be provided.', 16, 1);
+            RETURN;
+        END
+
+        -- Handle Genre
+        IF @GenreName IS NOT NULL
+        BEGIN
+            SELECT @GenreID = GenreID 
+            FROM Genres 
+            WHERE GenreName = @GenreName;
+
+            IF @GenreID IS NULL
+            BEGIN
+                INSERT INTO Genres (GenreName)
+                VALUES (@GenreName);
+
+                SET @GenreID = SCOPE_IDENTITY();
+            END
+        END
+
+        -- Insert the album
+        INSERT INTO Albums (AlbumName, ReleaseYear, ArtistID, GenreID, MonthlyListeners, AlbumCover)
+        VALUES (
+            @AlbumName, 
+            ISNULL(@ReleaseYear, YEAR(GETDATE())), 
+            @ArtistID, 
+            @GenreID, 
+            @MonthlyListeners,
+            CASE WHEN @AlbumCover IS NOT NULL THEN @AlbumCover ELSE NULL END
+        );
+
+        SET @AlbumID = SCOPE_IDENTITY();
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR(@ErrorMessage, 16, 1);
+    END CATCH
+END;
+GO
+CREATE PROCEDURE spDeleteSongFromAlbum
+    @SongID INT,
+    @AlbumID INT
+AS
+BEGIN
+    BEGIN TRY
+        SET NOCOUNT ON;
+
+        -- Delete the association between the song and the album
+        DELETE FROM AlbumSongs
+        WHERE SongID = @SongID AND AlbumID = @AlbumID;
+
+        -- Check if the song is still associated with any other album
+        IF NOT EXISTS (SELECT 1 FROM AlbumSongs WHERE SongID = @SongID)
+        BEGIN
+            -- If not associated with any album, delete the song
+            DELETE FROM Songs WHERE SongID = @SongID;
+        END
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR(@ErrorMessage, 16, 1);
+    END CATCH
+END;
+GO
+
+
+CREATE PROCEDURE spAddSongToAlbum
+    @AlbumID INT,
+    @SongName NVARCHAR(100),
+    @Duration INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @ArtistID INT;
-    DECLARE @GenreID INT = 1;  -- Default GenreID to 'No genre'
+    DECLARE @SongID INT;
 
-    -- Check if an album with the same name and release year already exists
-    IF EXISTS (SELECT 1 FROM Albums WHERE AlbumName = @AlbumName AND ReleaseYear = ISNULL(@ReleaseYear, YEAR(GETDATE())) AND Deleted = 0)
-    BEGIN
-        -- Raise an error indicating that the album already exists
-        RAISERROR('An album with the same name and release year already exists.', 16, 1);
-        RETURN;
-    END
+    -- Insert the song
+    INSERT INTO Songs (SongName, Duration)
+    VALUES (@SongName, @Duration);
 
-    -- Handle Artist
-    IF @ArtistName IS NOT NULL
-    BEGIN
-        SELECT @ArtistID = ArtistID 
-        FROM Artists 
-        WHERE ArtistName = @ArtistName AND Deleted = 0;
+    SET @SongID = SCOPE_IDENTITY();  -- Get the new SongID
 
-        IF @ArtistID IS NULL
-        BEGIN
-            -- Artist does not exist, create new artist
-            INSERT INTO Artists (ArtistName, Country)
-            VALUES (@ArtistName, @Country);
-
-            SET @ArtistID = SCOPE_IDENTITY();  -- Get the new ArtistID
-        END
-    END
-    ELSE
-    BEGIN
-        -- If ArtistName is not provided, cannot proceed
-        RAISERROR('ArtistName must be provided.', 16, 1);
-        RETURN;
-    END
-
-    -- Handle Genre
-    IF @GenreName IS NOT NULL
-    BEGIN
-        SELECT @GenreID = GenreID 
-        FROM Genres 
-        WHERE GenreName = @GenreName;
-
-        IF @GenreID IS NULL
-        BEGIN
-            -- Genre does not exist, create new genre
-            INSERT INTO Genres (GenreName)
-            VALUES (@GenreName);
-
-            SET @GenreID = SCOPE_IDENTITY();  -- Get the new GenreID
-        END
-    END
-
-    -- Insert the album into the Albums table
-    INSERT INTO Albums (AlbumName, ReleaseYear, ArtistID, GenreID, MonthlyListeners)
-    VALUES (
-        @AlbumName, 
-        ISNULL(@ReleaseYear, YEAR(GETDATE())), 
-        @ArtistID, 
-        @GenreID, 
-        @MonthlyListeners
-    );
+    -- Link song to album in AlbumSongs table
+    INSERT INTO AlbumSongs (AlbumID, SongID)
+    VALUES (@AlbumID, @SongID);
 END;
-
 GO
-
 
 
 -- GET ALBUMS with filtering options
@@ -93,16 +146,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT 
-        a.AlbumID,
-        a.AlbumName, 
-        a.ReleaseYear, 
-        g.GenreName, 
-        ar.ArtistName,	
-        a.MonthlyListeners
+	SELECT 
+		a.AlbumID,
+		a.AlbumName, 
+		a.ReleaseYear, 
+		g.GenreName, 
+		ar.ArtistName,	
+		a.MonthlyListeners,
+		a.AlbumCover
     FROM Albums a
         LEFT JOIN Artists ar ON a.ArtistID = ar.ArtistID
-        LEFT JOIN Genres g ON a.GenreID = g.GenreID
+        LEFT JOIN Genres g ON a.GenreID = g.GenreID  -- Join with Genres table if GenreID is present
     WHERE (@ShowDeleted = 1 OR a.Deleted = 0)  -- Include deleted albums only if @ShowDeleted = 1
         AND (@ArtistName IS NULL OR ar.ArtistName LIKE '%' + @ArtistName + '%')  -- Filter by artist name if provided
         AND (@GenreName IS NULL OR g.GenreName LIKE '%' + @GenreName + '%')  -- Filter by genre name if provided
@@ -114,6 +168,7 @@ END;
 GO
 
 
+
 -- UPDATE ALBUM with GenreID and MonthlyListeners
 ALTER PROCEDURE spUpdateAlbum
     @AlbumID INT,
@@ -121,34 +176,66 @@ ALTER PROCEDURE spUpdateAlbum
     @ReleaseYear SMALLINT,
     @ArtistName NVARCHAR(100),
     @GenreName NVARCHAR(50),
-    @MonthlyListeners INT
+    @MonthlyListeners INT,
+    @AlbumCover VARBINARY(MAX) = NULL
 AS
 BEGIN
-    -- Ensure the album exists
-    IF EXISTS (SELECT 1 FROM Albums WHERE AlbumID = @AlbumID)
-    BEGIN
-        -- Get ArtistID and GenreID based on name
-        DECLARE @ArtistID INT;
-        DECLARE @GenreID INT;
+    BEGIN TRY
+        -- Ensure the album exists
+        IF NOT EXISTS (SELECT 1 FROM Albums WHERE AlbumID = @AlbumID)
+        BEGIN
+            RAISERROR('Album not found.', 16, 1);
+            RETURN;
+        END
+
+        -- Get ArtistID and GenreID based on names
+        DECLARE @ArtistID INT = NULL;
+        DECLARE @GenreID INT = NULL;
 
         SELECT @ArtistID = ArtistID FROM Artists WHERE ArtistName = @ArtistName;
         SELECT @GenreID = GenreID FROM Genres WHERE GenreName = @GenreName;
 
-        -- Update the album details
+        -- Update the album details, including conditional update for AlbumCover
         UPDATE Albums
-        SET AlbumName = @AlbumName,
+        SET 
+            AlbumName = @AlbumName,
             ReleaseYear = @ReleaseYear,
-            ArtistID = ISNULL(@ArtistID, ArtistID), -- If artist not found, retain existing ArtistID
-            GenreID = ISNULL(@GenreID, GenreID),   -- If genre not found, retain existing GenreID
-            MonthlyListeners = @MonthlyListeners
+            ArtistID = ISNULL(@ArtistID, ArtistID),
+            GenreID = ISNULL(@GenreID, GenreID),
+            MonthlyListeners = @MonthlyListeners,
+            AlbumCover = CASE WHEN @AlbumCover IS NOT NULL THEN @AlbumCover ELSE AlbumCover END
         WHERE AlbumID = @AlbumID;
-    END
-    ELSE
-    BEGIN
-        RAISERROR('Album not found.', 16, 1);
-    END
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR(@ErrorMessage, 16, 1);
+    END CATCH
 END;
 GO
+
+CREATE PROCEDURE spGetAlbumByID
+    @AlbumID INT
+AS
+BEGIN
+    DECLARE @RecordCount INT;
+
+    SELECT @RecordCount = COUNT(*)
+    FROM Albums
+    WHERE AlbumID = @AlbumID;
+
+    -- Check if no records were found
+    IF @RecordCount = 0
+    BEGIN
+        -- Raise an error if no matching record is found
+        RAISERROR('No album found with the specified AlbumID: %d', 16, 1, @AlbumID);
+        RETURN;
+    END
+
+    -- If a record exists, retrieve the Album details
+    SELECT AlbumName, AlbumCover
+    FROM Albums
+    WHERE AlbumID = @AlbumID;
+END;
 
 
 -- SOFT DELETE ALBUM
@@ -289,3 +376,10 @@ BEGIN
     END
 END;
 GO
+USE MusicDB;
+GO
+
+SELECT * FROM Songs 
+
+
+EXEC spGetAlbumByID -5
